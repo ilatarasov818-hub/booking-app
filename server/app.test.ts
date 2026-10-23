@@ -118,4 +118,33 @@ describe('API', () => {
     expect((await t.app.request(`/api/my/${booking.token}/cancel`, post('', {}))).status).toBe(409)
     expect(other.booking.token).not.toBe(booking.token)
   })
+
+  it('lets the master edit services and hours', async () => {
+    const put = (json: unknown) => ({ ...post('', json, auth), method: 'PUT' })
+    expect((await t.app.request('/api/admin/settings')).status).toBe(401)
+    const { settings } = await (await t.app.request('/api/admin/settings', { headers: auth })).json()
+    expect(settings.services).toHaveLength(2)
+
+    const bad = await t.app.request('/api/admin/settings', put({ ...settings, services: [] }))
+    expect(bad.status).toBe(400)
+    expect((await bad.json()).fields.services).toBeTruthy()
+
+    const next = {
+      ...settings,
+      name: 'Новое имя',
+      hours: { ...settings.hours, mon: null, sun: { start: '15:00', end: '18:00' } },
+      services: [{ ...settings.services[1], price: 3000 }, { name: 'Массаж', duration: 30, price: 1500 }],
+    }
+    const saved = await (await t.app.request('/api/admin/settings', put(next))).json()
+    expect(saved.settings.services[1].id).toMatch(/^[\w-]+$/)
+
+    const { business } = await (await t.app.request('/api/business')).json()
+    expect(business).toMatchObject({ name: 'Новое имя', timezone: 'Europe/Moscow' })
+    expect(business.services.map((s: { price: number }) => s.price)).toEqual([3000, 1500])
+    // Monday is now closed, Sunday (today, 12:00) open from 15:00.
+    const { days } = await (await t.app.request('/api/availability?service=long')).json()
+    expect(days[1].slots).toEqual([])
+    expect(days[0].slots[0]).toBe(900)
+    expect((await t.app.request('/api/availability?service=short')).status).toBe(404)
+  })
 })

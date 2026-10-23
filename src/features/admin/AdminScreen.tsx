@@ -6,10 +6,12 @@ import type { Business } from '../../lib/types'
 import { IconButton } from '../../ui/Button'
 import { SectionTitle } from '../../ui/Card'
 import { Loading } from '../../ui/Loading'
+import { Segmented } from '../../ui/Segmented'
 import { EmptyState, ErrorText } from '../../ui/States'
 import { BookingRow } from './BookingRow'
 import { LoginForm } from './LoginForm'
 import { NotifyCard } from './NotifyCard'
+import { SettingsForm } from './SettingsForm'
 import { useAdmin } from './useAdmin'
 
 const TABS: { id: AgendaFilter; label: string }[] = [
@@ -24,28 +26,40 @@ const EMPTY = {
   cancelled: 'Отменённых записей нет',
 }
 
-export function AdminScreen({ business }: { business: Business }) {
+type View = 'bookings' | 'settings'
+
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'bookings', label: 'Записи' },
+  { id: 'settings', label: 'Настройки' },
+]
+
+export function AdminScreen({ business, onBusinessChange }: { business: Business; onBusinessChange: () => void }) {
   const a = useAdmin()
+  const [view, setView] = useState<View>('bookings')
   const [tab, setTab] = useState<AgendaFilter>('upcoming')
 
   if (!a.password) return <LoginForm onLogin={a.login} error={a.loginError} checking={a.checking} />
 
   const data = a.bookings.data
-  const days = data ? agenda(data.bookings, data.now, tab) : []
+  const days = data && view === 'bookings' ? agenda(data.bookings, data.now, tab) : []
   const stats = data ? upcomingRevenue(data.bookings, data.now) : null
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
       <header className="flex items-center gap-2 pt-2">
         <div className="min-w-0 flex-1">
-          <h1 className="text-display font-bold tracking-tight">Записи</h1>
+          <h1 className="text-display font-bold tracking-tight">Кабинет</h1>
           <p className="truncate text-body text-fg-2">{business.name}</p>
         </div>
-        <IconButton icon="refresh" label="Обновить" onClick={a.bookings.refresh} />
+        {view === 'bookings' && <IconButton icon="refresh" label="Обновить" onClick={a.bookings.refresh} />}
         <IconButton icon="logout" label="Выйти" onClick={a.logout} />
       </header>
 
-      {stats && (
+      <Segmented options={VIEWS} value={view} onChange={setView} />
+
+      {view === 'settings' && <SettingsForm password={a.password} onSaved={onBusinessChange} />}
+
+      {view === 'bookings' && stats && (
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-card bg-surface p-4">
             <p className="text-caption text-fg-2">Впереди записей</p>
@@ -58,25 +72,16 @@ export function AdminScreen({ business }: { business: Business }) {
         </div>
       )}
 
-      <NotifyCard password={a.password} status={a.notify} />
+      {view === 'bookings' && (
+        <>
+          <NotifyCard password={a.password} status={a.notify} />
+          <Segmented options={TABS} value={tab} onChange={setTab} />
+        </>
+      )}
 
-      <div role="tablist" className="grid grid-cols-3 gap-1 rounded-control bg-surface-2 p-1">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            className={`h-9 rounded-[0.625rem] text-caption font-semibold transition focus-visible:outline-2 focus-visible:outline-accent ${tab === t.id ? 'bg-surface text-fg-1 shadow-sm' : 'text-fg-2'}`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {!data && a.bookings.loading && <Loading />}
-      {a.bookings.error != null && <ErrorText onRetry={a.bookings.refresh}>{errorText(a.bookings.error)}</ErrorText>}
-      {data && days.length === 0 && <EmptyState icon="calendar" title={EMPTY[tab]} />}
+      {view === 'bookings' && !data && a.bookings.loading && <Loading />}
+      {view === 'bookings' && a.bookings.error != null && <ErrorText onRetry={a.bookings.refresh}>{errorText(a.bookings.error)}</ErrorText>}
+      {view === 'bookings' && data && days.length === 0 && <EmptyState icon="calendar" title={EMPTY[tab]} />}
 
       {days.map((d) => (
         <section key={d.date} className="animate-rise">

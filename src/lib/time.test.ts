@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, daysBetween, formatHm, isDate, nowIn, parseHm, weekdayOf } from './time'
+import { addDays, daysBetween, formatHm, isDate, maskTime, nowIn, parseHm, weekdayOf } from './time'
 
 describe('time', () => {
   it('converts hh:mm', () => {
@@ -21,5 +21,12 @@ describe('time', () => {
 
   it('reads the clock in the business time zone', () => {
     expect(nowIn('Europe/Moscow', new Date('2026-10-25T21:30:00Z'))).toEqual({ date: '2026-10-26', minutes: 30 })
+  })
+
+  it('masks typed time as HH:MM', () => {
+    expect(maskTime('9')).toBe('9')
+    expect(maskTime('0930')).toBe('09:30')
+    expect(maskTime('09:3')).toBe('09:3')
+    expect(maskTime('12:005')).toBe('12:00')
   })
 })

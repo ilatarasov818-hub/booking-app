@@ -1,6 +1,6 @@
 import type { ClientView } from '../lib/manage'
+import type { Settings } from '../lib/settings'
 import type { Booking, BookingInput, Business, DaySlots, Now } from '../lib/types'
-import type { FieldErrors } from '../lib/validate'
 
 const BASE = import.meta.env.VITE_API_BASE ?? ''
 
@@ -8,7 +8,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     public code: string,
-    public fields: FieldErrors = {},
+    /** Field errors by name or path (`services.0.price`). */
+    public fields: Record<string, string> = {},
   ) {
     super(code)
   }
@@ -47,6 +48,9 @@ export const api = {
   adminBookings: (password: string) => request<{ bookings: Booking[]; now: Now }>('/api/admin/bookings', { password }),
   cancel: (password: string, id: string) =>
     request<{ booking: Booking }>(`/api/admin/bookings/${id}/cancel`, { method: 'POST', password }),
+  settings: (password: string) => request<{ settings: Settings }>('/api/admin/settings', { password }),
+  saveSettings: (password: string, settings: unknown) =>
+    request<{ settings: Settings }>('/api/admin/settings', { method: 'PUT', password, body: JSON.stringify(settings) }),
   notifyStatus: (password: string) =>
     request<{ configured: boolean; linked: boolean }>('/api/admin/notify', { password }),
   notifyLink: (password: string) => request<{ linked: boolean }>('/api/admin/notify/link', { method: 'POST', password }),
@@ -64,6 +68,8 @@ export function errorText(err: unknown): string {
       return 'Изменить запись уже нельзя: до визита осталось мало времени. Позвоните мастеру.'
     case 'not_found':
       return 'Запись не найдена. Проверьте ссылку.'
+    case 'bad_settings':
+      return 'Проверьте поля, отмеченные красным.'
     case 'unauthorized':
       return 'Неверный пароль.'
     case 'no_token':

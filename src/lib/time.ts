@@ -59,3 +59,9 @@ export function nowIn(timeZone: string, at: Date): Now {
     minutes: Number(get('hour')) * 60 + Number(get('minute')),
   }
 }
+
+/** Digits typed as "930" or "0930" become "09:30"; always 24-hour, unlike the browser's time picker. */
+export function maskTime(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 4)
+  return d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d
+}

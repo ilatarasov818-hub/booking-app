@@ -31,6 +31,11 @@ export function relativeDay(date: string, today: string): string | null {
   return null
 }
 
+/** "Понедельник" */
+export function weekdayName(day: keyof typeof DAY_FULL): string {
+  return DAY_FULL[day][0].toUpperCase() + DAY_FULL[day].slice(1)
+}
+
 /** "суббота, 24 октября" */
 export function formatDateLong(date: string): string {
   const month = MONTHS[Number(date.slice(5, 7)) - 1]

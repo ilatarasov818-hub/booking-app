@@ -18,3 +18,8 @@
 ## 2026-10-23 Clients manage bookings by a secret link
 - Each booking gets a random `token`; `/my/<token>` lets the client reschedule or cancel. No client accounts: the link is the credential (shown after booking, saved in localStorage and in the `.ics`).
 - Changes close `minLeadMinutes` before the start, same as new bookings; after that only by phone.
+
+## 2026-10-23 Master edits settings in the cabinet
+- Profile, services, hours and breaks are saved to `DATA_DIR/business.json` and override `config.json` key by key. Branding, timezone and slot rules stay in config (set once by whoever deploys).
+- One validator (`lib/settings.ts`) runs in the form and on the server. Service ids are kept on edit so past bookings still match.
+- Time fields are masked text (HH:MM), not `type=time`: the native picker follows the browser locale and shows AM/PM.

@@ -34,7 +34,7 @@ export function App() {
       {biz.data && route.name === 'my' && (
         <ManageScreen key={route.token} business={biz.data.business} today={biz.data.today} token={route.token} />
       )}
-      {biz.data && route.name === 'admin' && <AdminScreen business={biz.data.business} />}
+      {biz.data && route.name === 'admin' && <AdminScreen business={biz.data.business} onBusinessChange={biz.refresh} />}
     </main>
   )
 }
