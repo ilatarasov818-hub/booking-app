@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import type { Settings } from '../src/lib/settings'
 import type { Booking } from '../src/lib/types'
 
 /** JSON files in one folder. Sync I/O keeps check-then-write atomic in a single process. */
@@ -42,5 +43,14 @@ export class Store {
 
   setNotifyChatId(chatId: string) {
     this.write('notify.json', { chatId })
+  }
+
+  /** What the master changed in the cabinet; overrides config.json. */
+  settings(): Partial<Settings> {
+    return this.read<Partial<Settings>>('business.json', {})
+  }
+
+  setSettings(settings: Settings) {
+    this.write('business.json', settings)
   }
 }
