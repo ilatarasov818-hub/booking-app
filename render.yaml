@@ -1,0 +1,16 @@
+# Free public demo on Render: New → Blueprint → pick this repo.
+# Free instances sleep when idle and lose data/ on restart — fine for a demo.
+services:
+  - type: web
+    name: booking-app-demo
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run serve
+    healthCheckPath: /api/business
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Public demo: visitors may open /admin with this password.
+      - key: ADMIN_PASSWORD
+        value: demo
