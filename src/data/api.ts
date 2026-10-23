@@ -1,3 +1,4 @@
+import type { ClientView } from '../lib/manage'
 import type { Booking, BookingInput, Business, DaySlots, Now } from '../lib/types'
 import type { FieldErrors } from '../lib/validate'
 
@@ -34,6 +35,15 @@ export const api = {
   book: (input: BookingInput) =>
     request<{ booking: Booking }>('/api/bookings', { method: 'POST', body: JSON.stringify(input) }),
 
+  my: (token: string) => request<ClientView>(`/api/my/${encodeURIComponent(token)}`),
+  myAvailability: (token: string) => request<{ days: DaySlots[] }>(`/api/my/${encodeURIComponent(token)}/availability`),
+  myCancel: (token: string) => request<ClientView>(`/api/my/${encodeURIComponent(token)}/cancel`, { method: 'POST' }),
+  myReschedule: (token: string, date: string, start: number) =>
+    request<ClientView>(`/api/my/${encodeURIComponent(token)}/reschedule`, {
+      method: 'POST',
+      body: JSON.stringify({ date, start }),
+    }),
+
   adminBookings: (password: string) => request<{ bookings: Booking[]; now: Now }>('/api/admin/bookings', { password }),
   cancel: (password: string, id: string) =>
     request<{ booking: Booking }>(`/api/admin/bookings/${id}/cancel`, { method: 'POST', password }),
@@ -50,6 +60,10 @@ export function errorText(err: unknown): string {
       return 'Нет связи. Проверьте интернет и попробуйте ещё раз.'
     case 'slot_taken':
       return 'Это время только что заняли. Выберите другое.'
+    case 'too_late':
+      return 'Изменить запись уже нельзя: до визита осталось мало времени. Позвоните мастеру.'
+    case 'not_found':
+      return 'Запись не найдена. Проверьте ссылку.'
     case 'unauthorized':
       return 'Неверный пароль.'
     case 'no_token':

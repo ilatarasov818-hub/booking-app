@@ -6,6 +6,16 @@ export function pushPath(path: string, state: unknown = null) {
   window.history.pushState(state, '', path)
 }
 
+/** Go to another screen inside the app (listeners of `onPop` see it like Back/Forward). */
+export function navigate(path: string) {
+  window.history.pushState(null, '', path)
+  window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
+}
+
+export function absoluteUrl(path: string): string {
+  return new URL(path, window.location.origin).href
+}
+
 export function pushState(state: unknown) {
   window.history.pushState(state, '')
 }

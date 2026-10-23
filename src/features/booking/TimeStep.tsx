@@ -1,31 +1,34 @@
 import { useEffect } from 'react'
-import { api, errorText } from '../../data/api'
+import { errorText } from '../../data/api'
 import { useResource } from '../../data/hooks'
 import { dayNumber, dayShort, formatDateLong, relativeDay } from '../../lib/format'
 import { groupSlots } from '../../lib/slots'
 import { formatHm } from '../../lib/time'
-import type { Service } from '../../lib/types'
+import type { DaySlots } from '../../lib/types'
 import { SectionTitle } from '../../ui/Card'
 import { Chip } from '../../ui/Chip'
 import { Loading } from '../../ui/Loading'
 import { EmptyState, ErrorText } from '../../ui/States'
 
 export function TimeStep({
-  service,
+  availKey,
+  loadDays,
   today,
   date,
   notice,
   onDate,
   onTime,
 }: {
-  service: Service
+  /** Changing the key reloads the free slots. */
+  availKey: string
+  loadDays: () => Promise<{ days: DaySlots[] }>
   today: string
   date?: string
   notice: string | null
   onDate: (date: string) => void
   onTime: (date: string, start: number) => void
 }) {
-  const avail = useResource(`avail:${service.id}`, () => api.availability(service.id))
+  const avail = useResource(availKey, loadDays)
   const days = avail.data?.days ?? []
   const firstOpen = days.find((d) => d.slots.length > 0)?.date
   const selected = days.find((d) => d.date === date && d.slots.length > 0) ?? days.find((d) => d.date === firstOpen)

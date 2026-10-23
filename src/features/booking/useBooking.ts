@@ -3,6 +3,7 @@ import { api, ApiError, errorText } from '../../data/api'
 import { onPop, pushState, replaceState } from '../../platform/web/history'
 import type { Booking, Service } from '../../lib/types'
 import type { FieldErrors } from '../../lib/validate'
+import { saveToken } from './savedLinks'
 
 export type Step =
   | { name: 'service' }
@@ -61,6 +62,7 @@ export function useBooking(services: Service[]) {
     setFieldErrors({})
     try {
       const { booking } = await api.book({ serviceId: step.serviceId, date: step.date, start: step.start, ...contact })
+      if (booking.token) saveToken(booking.token)
       replaceState({ name: 'service' } satisfies Step)
       setStep({ name: 'done', booking })
     } catch (err) {

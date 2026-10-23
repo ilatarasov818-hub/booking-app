@@ -48,6 +48,7 @@ export function BookingRow({
         <p className="text-caption text-fg-2">
           {booking.serviceName} · {formatPrice(booking.price, currency)}
         </p>
+        {cancelled && booking.cancelledBy === 'client' && <p className="text-caption text-danger">Отменил клиент</p>}
         <a href={`tel:${booking.phone}`} className="mt-1 inline-flex items-center gap-1 text-caption whitespace-nowrap text-accent">
           <Icon name="phone" size={14} />
           {prettyPhone(booking.phone)}
