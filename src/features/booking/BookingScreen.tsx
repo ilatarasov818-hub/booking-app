@@ -1,7 +1,9 @@
+import { api } from '../../data/api'
 import type { Business } from '../../lib/types'
 import { IconButton } from '../../ui/Button'
 import { goBack } from '../../platform/web/history'
 import { BusinessHeader } from './BusinessHeader'
+import { MyBookings } from './MyBookings'
 import { ContactStep } from './ContactStep'
 import { DoneStep } from './DoneStep'
 import { ServiceStep } from './ServiceStep'
@@ -31,9 +33,13 @@ export function BookingScreen({ business, today }: { business: Business; today: 
         step.name === 'service' && <BusinessHeader business={business} compact={false} />
       )}
 
+      {step.name === 'service' && <MyBookings />}
       {step.name === 'service' && <ServiceStep business={business} onChoose={b.chooseService} />}
       {step.name === 'time' && service && (
-        <TimeStep service={service} today={today} date={step.date} notice={b.notice} onDate={b.chooseDate} onTime={b.chooseTime} />
+        <TimeStep
+          availKey={`avail:${service.id}`}
+          loadDays={() => api.availability(service.id)}
+          today={today} date={step.date} notice={b.notice} onDate={b.chooseDate} onTime={b.chooseTime} />
       )}
       {step.name === 'contact' && service && (
         <ContactStep

@@ -1,4 +1,4 @@
-import { addDays, daysBetween, parseHm, weekdayOf } from './time'
+import { addDays, daysBetween, minutesUntil, parseHm, weekdayOf } from './time'
 import type { Booking, Business, DaySlots, Now } from './types'
 
 function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
@@ -29,8 +29,7 @@ export function freeSlots(
 
   const slots: number[] = []
   for (let t = open; t + duration <= close; t += biz.slotStep) {
-    const minutesFromNow = ahead * 1440 + t - now.minutes
-    if (minutesFromNow < biz.minLeadMinutes) continue
+    if (minutesUntil(now, date, t) < biz.minLeadMinutes) continue
     if (busy.some(([s, e]) => overlaps(t, t + duration, s, e))) continue
     slots.push(t)
   }

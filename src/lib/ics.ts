@@ -11,8 +11,8 @@ function escape(text: string): string {
 }
 
 /** Calendar file for a booking, in the business's local (floating) time. */
-export function bookingIcs(booking: Booking, businessName: string, address: string): string {
-  return [
+export function bookingIcs(booking: Booking, businessName: string, address: string, manageUrl?: string): string {
+  const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//booking-app//RU',
@@ -23,7 +23,7 @@ export function bookingIcs(booking: Booking, businessName: string, address: stri
     `DTEND:${stamp(booking.date, booking.start + booking.duration)}`,
     `SUMMARY:${escape(`${booking.serviceName} — ${businessName}`)}`,
     `LOCATION:${escape(address)}`,
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ].join('\r\n')
+  ]
+  if (manageUrl) lines.push(`DESCRIPTION:${escape(`Перенести или отменить: ${manageUrl}`)}`, `URL:${manageUrl}`)
+  return [...lines, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n')
 }

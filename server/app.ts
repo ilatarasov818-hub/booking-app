@@ -1,9 +1,10 @@
-import { createHash, randomUUID, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 import { formatDateLong, formatPrice, formatRange } from '../src/lib/format'
+import { clientState } from '../src/lib/manage'
 import { prettyPhone } from '../src/lib/phone'
 import { availability, freeSlots } from '../src/lib/slots'
-import { nowIn } from '../src/lib/time'
+import { isDate, nowIn } from '../src/lib/time'
 import type { Booking, Business } from '../src/lib/types'
 import { parseBookingInput } from '../src/lib/validate'
 import type { Notifier } from './notifier'
@@ -26,7 +27,7 @@ function sameSecret(a: string, b: string): boolean {
   return timingSafeEqual(hash(a), hash(b))
 }
 
-export function bookingMessage(title: string, b: Booking, currency: string): string {
+export function bookingMessage(title: string, b: Booking, currency: string, note?: string): string {
   const lines = [
     `<b>${title}</b>`,
     `${escapeHtml(b.serviceName)} · ${formatPrice(b.price, currency)}`,
@@ -34,6 +35,7 @@ export function bookingMessage(title: string, b: Booking, currency: string): str
     `${escapeHtml(b.name)}, ${prettyPhone(b.phone)}`,
   ]
   if (b.comment) lines.push(`💬 ${escapeHtml(b.comment)}`)
+  if (note) lines.push(note)
   return lines.join('\n')
 }
 
@@ -80,10 +82,54 @@ export function createApp({ business, store, notifier, adminPassword, clock = ()
       comment: input.comment,
       status: 'active',
       createdAt: clock().toISOString(),
+      token: randomBytes(16).toString('base64url'),
     }
     store.addBooking(booking)
     await notify(bookingMessage('🆕 Новая запись', booking, business.currency))
     return c.json({ booking }, 201)
+  })
+
+  // The client's own link: the token is the only credential, so it is long and random.
+  const mine = (token: string) => (token ? store.bookings().find((b) => b.token === token) : undefined)
+  const myView = (b: Booking) => ({ booking: b, state: clientState(b, business, now()) })
+
+  app.get('/api/my/:token', (c) => {
+    const b = mine(c.req.param('token'))
+    return b ? c.json(myView(b)) : c.json({ error: 'not_found' }, 404)
+  })
+
+  app.get('/api/my/:token/availability', (c) => {
+    const b = mine(c.req.param('token'))
+    if (!b) return c.json({ error: 'not_found' }, 404)
+    const others = store.bookings().filter((o) => o.id !== b.id)
+    return c.json({ days: availability(business, b.duration, others, now()) })
+  })
+
+  app.post('/api/my/:token/cancel', async (c) => {
+    const b = mine(c.req.param('token'))
+    if (!b) return c.json({ error: 'not_found' }, 404)
+    if (clientState(b, business, now()) !== 'active') return c.json({ error: 'too_late' }, 409)
+    const booking = store.updateBooking(b.id, { status: 'cancelled', cancelledBy: 'client' })!
+    await notify(bookingMessage('❌ Клиент отменил запись', booking, business.currency))
+    return c.json(myView(booking))
+  })
+
+  app.post('/api/my/:token/reschedule', async (c) => {
+    const b = mine(c.req.param('token'))
+    if (!b) return c.json({ error: 'not_found' }, 404)
+    if (clientState(b, business, now()) !== 'active') return c.json({ error: 'too_late' }, 409)
+    const body = await c.req.json().catch(() => null)
+    const date = typeof body?.date === 'string' ? body.date : ''
+    const start = body?.start
+    if (!isDate(date) || !Number.isInteger(start)) return c.json({ error: 'bad_slot' }, 400)
+    const others = store.bookings().filter((o) => o.id !== b.id)
+    if (!freeSlots(business, date, b.duration, others, now()).includes(start)) {
+      return c.json({ error: 'slot_taken' }, 409)
+    }
+    const booking = store.updateBooking(b.id, { date, start })!
+    const was = `Было: ${formatDateLong(b.date)}, ${formatRange(b.start, b.duration)}`
+    await notify(bookingMessage('🔁 Клиент перенёс запись', booking, business.currency, was))
+    return c.json(myView(booking))
   })
 
   const admin = new Hono()
@@ -99,7 +145,7 @@ export function createApp({ business, store, notifier, adminPassword, clock = ()
   })
 
   admin.post('/bookings/:id/cancel', async (c) => {
-    const booking = store.updateBooking(c.req.param('id'), { status: 'cancelled' })
+    const booking = store.updateBooking(c.req.param('id'), { status: 'cancelled', cancelledBy: 'master' })
     if (!booking) return c.json({ error: 'not_found' }, 404)
     await notify(bookingMessage('❌ Запись отменена', booking, business.currency))
     return c.json({ booking })

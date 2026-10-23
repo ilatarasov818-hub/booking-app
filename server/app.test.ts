@@ -91,4 +91,31 @@ describe('API', () => {
     const { days } = await (await t.app.request('/api/availability?service=long')).json()
     expect(days[1].slots).toContain(750)
   })
+
+  it('lets the client reschedule and cancel by their own link', async () => {
+    const { booking } = await (await t.app.request('/api/bookings', post('', body))).json()
+    expect(booking.token).toMatch(/^[\w-]{20,}$/)
+    expect((await t.app.request('/api/my/wrong')).status).toBe(404)
+
+    const view = await (await t.app.request(`/api/my/${booking.token}`)).json()
+    expect(view.state).toBe('active')
+    const { days } = await (await t.app.request(`/api/my/${booking.token}/availability`)).json()
+    expect(days[1].slots).toContain(600)
+
+    await t.app.request('/api/admin/notify/link', post('', {}, auth))
+    const other = await (await t.app.request('/api/bookings', post('', { ...body, start: 780 }))).json()
+    const taken = await t.app.request(`/api/my/${booking.token}/reschedule`, post('', { date: '2026-10-26', start: 780 }))
+    expect(taken.status).toBe(409)
+
+    const moved = await t.app.request(`/api/my/${booking.token}/reschedule`, post('', { date: '2026-10-27', start: 660 }))
+    expect((await moved.json()).booking).toMatchObject({ date: '2026-10-27', start: 660, status: 'active' })
+    expect(t.sent.at(-1)).toContain('перенёс')
+    expect(t.sent.at(-1)).toContain('Было:')
+
+    const cancel = await t.app.request(`/api/my/${booking.token}/cancel`, post('', {}))
+    expect(await cancel.json()).toMatchObject({ state: 'cancelled', booking: { cancelledBy: 'client' } })
+    expect(t.sent.at(-1)).toContain('Клиент отменил')
+    expect((await t.app.request(`/api/my/${booking.token}/cancel`, post('', {}))).status).toBe(409)
+    expect(other.booking.token).not.toBe(booking.token)
+  })
 })

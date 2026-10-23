@@ -42,6 +42,9 @@ export type Booking = {
   comment: string
   status: BookingStatus
   createdAt: string
+  /** Secret for the client's own link (/my/<token>). Missing on bookings made before it existed. */
+  token?: string
+  cancelledBy?: 'client' | 'master'
 }
 
 export type BookingInput = {

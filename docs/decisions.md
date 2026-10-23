@@ -14,3 +14,7 @@
 
 ## 2026-10-23 Notifications: master's own Telegram bot
 - Token in `.env`; chat linked from the admin page via the latest private message to the bot. No messages to clients yet (needs consent + their chat id).
+
+## 2026-10-23 Clients manage bookings by a secret link
+- Each booking gets a random `token`; `/my/<token>` lets the client reschedule or cancel. No client accounts: the link is the credential (shown after booking, saved in localStorage and in the `.ics`).
+- Changes close `minLeadMinutes` before the start, same as new bookings; after that only by phone.

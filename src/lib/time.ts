@@ -37,6 +37,11 @@ export function weekdayOf(date: string): Weekday {
   return WEEKDAYS[toUtc(date).getUTCDay()]
 }
 
+/** Minutes from `now` until `start` on `date` (negative once it has passed). */
+export function minutesUntil(now: Now, date: string, start: number): number {
+  return daysBetween(now.date, date) * 1440 + start - now.minutes
+}
+
 /** Current date and minute of day in the business time zone. */
 export function nowIn(timeZone: string, at: Date): Now {
   const parts = new Intl.DateTimeFormat('en-CA', {
